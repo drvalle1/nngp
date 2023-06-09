@@ -23,13 +23,18 @@ ty.invM.y=data.matrix(read.csv('3 precal ty_invM_y.csv'))
 tmp=read.csv('3 precal tx_invM_x.csv')
 tx.invM.x=array(unlist(tmp),dim=c(ncov,ncov,nphi.pot))
 
-#priors
-a.prior=0.1
-b.prior=0.1
+#potential sig2
+var.resp=var(dat$resp)*2
+nsig2.pot=30
+sig2.pot=seq(from=var.resp/1000,to=var.resp,length.out=nsig2.pot)
 
 #gibbs stuff
 ngibbs=10000
-param=list(betas=matrix(0,ncov,1),sig2=1,ind.phi=floor(nphi.pot/2))
+tmp=floor(nsig2.pot/2)
+param=list(betas=matrix(0,ncov,1),
+           ind.sig2=tmp,
+           sig2=sig2.pot[tmp],
+           ind.phi=floor(nphi.pot/2))
 store.betas=matrix(NA,ngibbs,ncov)
 store.sig2.phi=matrix(NA,ngibbs,2)
 for (i in 1:ngibbs){
@@ -38,18 +43,18 @@ for (i in 1:ngibbs){
                            ncov=ncov,
                            tx.invM.x=tx.invM.x,
                            tx.invM.y=tx.invM.y)
-  param$sig2=sample.sig2(param=param,
-                         a.prior=a.prior,
-                         b.prior=b.prior,
-                         nobs=nobs,
-                         ty.invM.y=ty.invM.y,
-                         tx.invM.x=tx.invM.x)
-  param$ind.phi=sample.phi(param=param,
-                     nphi.pot=nphi.pot,
-                     log.detD=log.detD,
-                     ty.invM.y=ty.invM.y,
-                     tx.invM.y=tx.invM.y,
-                     tx.invM.x=tx.invM.x)
+  tmp=sample.phi.sig2(param=param,
+                      nphi.pot=nphi.pot,
+                      nsig2.pot=nsig2.pot,
+                      nobs=nobs,
+                      sig2.pot=sig2.pot,
+                      log.detD=log.detD,
+                      ty.invM.y=ty.invM.y,
+                      tx.invM.y=tx.invM.y,
+                      tx.invM.x=tx.invM.x)
+  param$ind.phi=tmp$ind.phi
+  param$ind.sig2=tmp$ind.sig2      
+  param$sig2=sig2.pot[param$ind.sig2]
   
   #store results
   store.betas[i,]=param$betas
